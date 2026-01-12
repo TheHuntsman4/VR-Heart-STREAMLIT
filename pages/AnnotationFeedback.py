@@ -48,34 +48,6 @@ st.markdown(
         display: inline-block !important;
     }
 
-    /* Dialog background - BRIGHT RED - Multiple selectors for comprehensive coverage */
-    div[data-testid="stDialog"],
-    div[data-baseweb="modal"],
-    .stDialog,
-    [data-baseweb="modal"] > div,
-    div[data-baseweb="modal"] > div[role="dialog"],
-    [role="dialog"] {
-        background-color: #FF0000 !important;
-    }
-    
-    /* Dialog content container background */
-    div[data-testid="stDialog"] > div,
-    div[data-baseweb="modal"] > div,
-    [data-baseweb="modal"] > div > div {
-        background-color: #FF0000 !important;
-    }
-    
-    /* Dialog backdrop/overlay - semi-transparent red */
-    [data-baseweb="modal"]:before,
-    [data-baseweb="modal"]::before {
-        background-color: rgba(255, 0, 0, 0.5) !important;
-    }
-    
-    /* Additional modal backdrop targeting */
-    div[data-baseweb="modal"] + div,
-    body > div[data-baseweb="modal"] {
-        background-color: rgba(255, 0, 0, 0.3) !important;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -83,27 +55,27 @@ st.markdown(
 
 
 
-# Custom CSS for UI layout and styling
-st.markdown("""
-    <style>
-    .stSlider { padding-bottom: 20px; }
-    .block-container { padding-top: 2rem; }
-    .stButton button { width: 100%; }
-    /* Centering the canvas container */
-    div[data-testid="stCanvas"] {
-        margin: 0 auto;
-    }
+# # Custom CSS for UI layout and styling
+# st.markdown("""
+#     <style>
+#     .stSlider { padding-bottom: 20px; }
+#     .block-container { padding-top: 2rem; }
+#     .stButton button { width: 100%; }
+#     /* Centering the canvas container */
+#     div[data-testid="stCanvas"] {
+#         margin: 0 auto;
+#     }
     
-    /* Additional dialog styling for bright red background */
-    [data-baseweb="modal"],
-    [data-baseweb="modal"] > div,
-    [data-baseweb="modal"] > div[role="dialog"],
-    div[role="dialog"] {
-        background-color: #FF0000 !important;
-        background: #FF0000 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+#     /* Additional dialog styling for bright red background */
+#     [data-baseweb="modal"],
+#     [data-baseweb="modal"] > div,
+#     [data-baseweb="modal"] > div[role="dialog"],
+#     div[role="dialog"] {
+#         background-color: #FF0000 !important;
+#         background: #FF0000 !important;
+#     }
+#     </style>
+    # """, unsafe_allow_html=True)
 
 
 MAX_ARCHIVE_CACHE_ITEMS = 2
@@ -429,7 +401,11 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
     bg_pil.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-    bg_image_url = f"data:image/jpeg;base64,{img_base64}"
+    max_display_width = 700
+    w_percent = (max_display_width / float(bg_pil.size[0]))
+    h_size = int((float(bg_pil.size[1]) * float(w_percent)))
+    bg_pil_optimized = bg_pil.resize((max_display_width, h_size), Image.Resampling.LANCZOS)
+    bg_pil_optimized = bg_pil_optimized.convert("RGB")
     
     canvas_height = img_rgb.shape[0]
     canvas_width = img_rgb.shape[1]
@@ -464,9 +440,9 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             stroke_width=stroke_width,
             stroke_color=stroke_color,
             background_color="#00000000",
-            background_image= bg_image_url,
-            height=canvas_height,
-            width=canvas_width,
+            background_image= bg_pil_optimized,
+            height=h_size,
+            width=max_display_width,
             drawing_mode=tool,
             key=canvas_id,
             display_toolbar=True,
