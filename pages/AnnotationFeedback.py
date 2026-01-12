@@ -448,6 +448,7 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
             stroke_width=stroke_width,
             stroke_color=stroke_color,
             background_image=canvas_background,
+            background_color="#ffffff00",
             height=target_height,
             width=target_width,
             drawing_mode=tool,
