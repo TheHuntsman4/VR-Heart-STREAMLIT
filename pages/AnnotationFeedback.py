@@ -424,7 +424,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             stroke_width=stroke_width,
             stroke_color=stroke_color,
             background_color="#00000000",
-            background_image=bg_pil,
+            background_image="./vr_heart_sample_p64_feedback.png",
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
