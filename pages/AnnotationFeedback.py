@@ -47,7 +47,7 @@ st.markdown(
         background-color: #f8f9fb !important;
     }
     html[data-theme="dark"] .st-drawable-canvas {
-        background-color: #1c1f26 !important;
+        background-color: #00000000 !important;
     }
 
     /* Ensuring buttons are visible in both modes */
