@@ -417,13 +417,13 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
 
     with col_canvas:
         # Wait for bg_pil to be loaded, then await for 5 seconds before proceeding
-        logger.warning(f"Waiting for background image to load... {not bg_pil}")
+        logger.warning(f"\nWaiting for background image to load... {not bg_pil}")
         time.sleep(5)
         if not bg_pil:
             # time.sleep(5)
-            logger.warning("Background image not loaded. Please try again.")
+            logger.warning("\nBackground image not loaded. Please try again.")
         else:
-            logger.warning(f"[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
+            logger.warning(f"\n[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
         canvas_id = f"canvas_{view_name}_{slice_num}"
 
         canvas_result = st_canvas(
@@ -439,7 +439,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             display_toolbar=True,
             update_streamlit=True,
         )
-        print(f"[CANVAS RESULT LOADED] View: {view_name}, Slice: {slice_num}, Canvas ID: {canvas_id}, Has image_data: {canvas_result.image_data is not None}")
+        print(f"\n[CANVAS RESULT LOADED] View: {view_name}, Slice: {slice_num}, Canvas ID: {canvas_id}, Has image_data: {canvas_result.image_data is not None}")
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
