@@ -12,6 +12,7 @@ import logging
 import requests
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
+import time
 
 st.set_page_config(layout="wide", page_title="Annotator And Feedback")
 backend_url = st.secrets["BACKEND_URL"]
@@ -363,6 +364,7 @@ def extract_masks_from_zip(zip_source, dicom_image):
 
 @st.dialog("Feedback Drawing Tool", width="large")
 def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_name=None, upload_id: str | None = None):
+    print(f"[ANNOTATION VIEW ACTIVATED] View: {view_name}, Slice: {slice_num}, Mask: {mask_name or 'None'}, Upload ID: {upload_id or 'N/A'}")
     array_details = "unavailable"
     if isinstance(img_rgb, np.ndarray):
         array_details = (
@@ -382,6 +384,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
     
     # Convert numpy array to PIL Image
     bg_pil = Image.fromarray(img_rgb)
+    print(f"[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
     logger.info(
         "bg_pil ready | mode=%s | size=%s | upload=%s | view=%s | slice=%s",
         bg_pil.mode,
@@ -413,6 +416,12 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         tool = st.selectbox("Tool", ("freedraw", "line", "rect", "circle"))
 
     with col_canvas:
+        # Wait for bg_pil to be loaded, then await for 5 seconds before proceeding
+        if not bg_pil:
+            time.sleep(5)
+            st.error("Background image not loaded. Please try again.")
+        else:
+            print(f"[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
         canvas_id = f"canvas_{view_name}_{slice_num}"
 
         canvas_result = st_canvas(
@@ -428,6 +437,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             display_toolbar=True,
             update_streamlit=True,
         )
+        print(f"[CANVAS RESULT LOADED] View: {view_name}, Slice: {slice_num}, Canvas ID: {canvas_id}, Has image_data: {canvas_result.image_data is not None}")
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
