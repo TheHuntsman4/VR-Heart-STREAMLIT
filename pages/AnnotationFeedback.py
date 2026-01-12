@@ -419,12 +419,16 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         logger.warning(f"\image data... {bg_pil}")
         st.image(bg_pil, caption=f"{view_name} - Slice {slice_num}", use_column_width=True)
         
+        # INSERT_YOUR_CODE
+        # Load the static sample image for use as canvas background
+        static_image_path = os.path.join(os.path.dirname(__file__), "vr_heart_sample_p64_feedback.png")
+        static_image = Image.open(static_image_path)
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
             background_color="#00000000",
-            background_image="./vr_heart_sample_p64_feedback.png",
+            background_image= static_image,
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
