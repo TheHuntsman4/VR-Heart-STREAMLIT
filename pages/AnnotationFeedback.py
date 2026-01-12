@@ -413,52 +413,45 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # --- OVERLAY APPROACH: st.image + transparent canvas ---
+        # --- OVERLAY APPROACH: st.image + transparent canvas using wrapper div ---
         
-        # Create a container for the overlay
+        # Convert PIL to base64 for HTML img tag
+        img_buffer = io.BytesIO()
+        bg_pil.save(img_buffer, format="PNG")
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        # Create HTML structure with image as background of a positioned container
         st.markdown(
             f"""
-            <style>
-            .canvas-overlay-{canvas_id} {{
+            <div id="canvas-container-{canvas_id}" style="
                 position: relative;
                 width: {canvas_width}px;
                 height: {canvas_height}px;
-            }}
-            .canvas-overlay-{canvas_id} .background-image {{
-                position: absolute;
-                top: 0;
-                left: 0;
-                z-index: 1;
-            }}
-            .canvas-overlay-{canvas_id} .canvas-layer {{
-                position: absolute;
-                top: 0;
-                left: 0;
-                z-index: 2;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-        
-        # Display the background image using st.image (this always works)
-        st.image(bg_pil, width=canvas_width, caption=None)
-        
-        # Apply negative margin to overlay canvas on top of image
-        st.markdown(
-            f"""
+                background-image: url('data:image/png;base64,{img_base64}');
+                background-size: {canvas_width}px {canvas_height}px;
+                background-repeat: no-repeat;
+            ">
+            </div>
             <style>
-            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) {{
+            /* Pull the canvas component up to overlay on the div */
+            #canvas-container-{canvas_id} + div[data-testid="stVerticalBlock"] > div[data-testid="stCustomComponentV1"],
+            #canvas-container-{canvas_id} ~ div[data-testid="stCustomComponentV1"],
+            div.st-key-{canvas_id} {{
                 margin-top: -{canvas_height}px !important;
-                position: relative;
-                z-index: 10;
+            }}
+            /* Make canvas wrapper transparent */
+            div.st-key-{canvas_id},
+            div.st-key-{canvas_id} > div,
+            div.st-key-{canvas_id} iframe {{
+                background: transparent !important;
+                background-color: transparent !important;
             }}
             </style>
             """,
             unsafe_allow_html=True,
         )
         
-        # Render transparent canvas on top
+        # Render transparent canvas
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
