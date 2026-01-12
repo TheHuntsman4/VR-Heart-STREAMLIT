@@ -46,6 +46,23 @@ st.markdown(
     html[data-theme="dark"] .st-drawable-canvas {
         background-color: transparent !important;
     }
+    
+    /* Fabric.js canvas layers - ensure background image is visible */
+    .canvas-container {
+        background-color: transparent !important;
+    }
+    .canvas-container canvas.lower-canvas {
+        background-color: transparent !important;
+    }
+    .canvas-container canvas.upper-canvas {
+        background-color: transparent !important;
+    }
+    
+    /* Target streamlit-drawable-canvas wrapper */
+    [data-testid="stCustomComponentV1"] > div,
+    [data-testid="stCustomComponentV1"] > div > div {
+        background-color: transparent !important;
+    }
 
     /* Ensuring buttons are visible in both modes */
     .st-drawable-canvas button {
@@ -412,6 +429,26 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
 
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
+        
+        # Convert PIL to base64 for CSS background (workaround for background_image bug)
+        img_buffer = io.BytesIO()
+        bg_pil.save(img_buffer, format="PNG")
+        img_base64_bg = base64.b64encode(img_buffer.getvalue()).decode()
+        
+        # Inject CSS to set background image on the canvas container
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stCustomComponentV1"]:has(canvas) {{
+                background-image: url("data:image/png;base64,{img_base64_bg}") !important;
+                background-size: {canvas_width}px {canvas_height}px !important;
+                background-repeat: no-repeat !important;
+                background-position: top left !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
