@@ -42,14 +42,6 @@ st.markdown(
         stroke: #ffffff !important; /* Dark mode icon stroke */
     }
 
-    /* Canvas background for light and dark modes */
-    html[data-theme="light"] .st-drawable-canvas {
-        background-color: #f8f9fb !important;
-    }
-    html[data-theme="dark"] .st-drawable-canvas {
-        background-color: #00000000 !important;
-    }
-
     /* Ensuring buttons are visible in both modes */
     .st-drawable-canvas button {
         visibility: visible !important;
