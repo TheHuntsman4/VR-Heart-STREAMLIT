@@ -419,7 +419,6 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_color="#00000000",
             background_image=bg_pil,
             height=canvas_height,
             width=canvas_width,
