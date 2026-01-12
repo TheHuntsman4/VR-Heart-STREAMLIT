@@ -377,28 +377,26 @@ def extract_masks_from_zip(zip_source, dicom_image):
 # --- Feedback Modal and Drawing Logic ---
 
 @st.dialog("Feedback Drawing Tool", width="large")
-def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_name=None, upload_id: str | None = None):
-    array_details = "unavailable"
-    if isinstance(img_rgb, np.ndarray):
-        array_details = (
-            f"shape={img_rgb.shape}, dtype={img_rgb.dtype}, "
-            f"min={int(np.min(img_rgb))}, max={int(np.max(img_rgb))}"
-        )
-    logger.warning(
-        "Opening feedback dialog | upload=%s | view=%s | slice=%s | mask=%s | %s",
+def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_filename, mask_name=None, upload_id: str | None = None):
+    """
+    Open the feedback dialog with a pre-loaded PIL image.
+    The PIL image should already be prepared before calling this function.
+    """
+    logger.info(
+        "Opening feedback dialog | upload=%s | view=%s | slice=%s | mask=%s | mode=%s | size=%s",
         upload_id or "N/A",
         view_name,
         slice_num,
         mask_name or "None",
-        array_details,
+        bg_pil.mode,
+        bg_pil.size,
     )
     mask_info = f" (Mask: **{mask_name}**)" if mask_name and mask_name != "None" else " (No Mask)"
     st.write(f"Annotating **{view_name}** - Slice **{slice_num}**{mask_info}")
     
-    # Convert numpy array to PIL Image
-    bg_pil = Image.fromarray(img_rgb)
+    # PIL image is already loaded - no conversion needed
     logger.info(
-        "bg_pil ready | mode=%s | size=%s | upload=%s | view=%s | slice=%s",
+        "bg_pil ready (pre-loaded) | mode=%s | size=%s | upload=%s | view=%s | slice=%s",
         bg_pil.mode,
         bg_pil.size,
         upload_id or "N/A",
@@ -411,8 +409,8 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
     bg_pil.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
     
-    canvas_height = img_rgb.shape[0]
-    canvas_width = img_rgb.shape[1]
+    # Get dimensions from PIL image
+    canvas_width, canvas_height = bg_pil.size
     logger.info(
         "Canvas dimensions | width=%s | height=%s | key=%s",
         canvas_width,
@@ -475,6 +473,19 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             key=canvas_id,
             display_toolbar=True,
             update_streamlit=True,
+        )
+        
+        # Inject JavaScript console.log for browser DevTools debugging
+        st.markdown(
+            f'<script>console.log("Canvas loaded | view={view_name} | slice={slice_num} | width={canvas_width} | height={canvas_height}")</script>',
+            unsafe_allow_html=True,
+        )
+        logger.info(
+            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s",
+            view_name,
+            slice_num,
+            canvas_width,
+            canvas_height,
         )
         # --- FIXED SECTION END ---
 
@@ -581,6 +592,53 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             file_name=fname,
             mime="image/png",
         )
+
+
+def prepare_and_open_annotation(img_rgb: np.ndarray, view_name: str, slice_num: int, 
+                                 original_filename: str, mask_name: str | None, 
+                                 upload_id: str | None):
+    """
+    Prepare PIL image from numpy array and store in session state,
+    then trigger dialog opening on rerun.
+    """
+    logger.info(
+        "Processing PIL image... | upload=%s | view=%s | slice=%s",
+        upload_id or "N/A",
+        view_name,
+        slice_num,
+    )
+    
+    # Convert numpy array to PIL Image
+    pil_image = Image.fromarray(img_rgb)
+    
+    logger.info(
+        "Processing PIL complete | upload=%s | view=%s | slice=%s | mode=%s | size=%s",
+        upload_id or "N/A",
+        view_name,
+        slice_num,
+        pil_image.mode,
+        pil_image.size,
+    )
+    
+    # Inject JavaScript console.log for browser DevTools debugging
+    st.markdown(
+        f'<script>console.log("Processing PIL complete | view={view_name} | slice={slice_num} | size={pil_image.size}")</script>',
+        unsafe_allow_html=True,
+    )
+    
+    # Store in session state
+    st.session_state["pending_annotation_image"] = pil_image
+    st.session_state["pending_annotation_view"] = view_name
+    st.session_state["pending_annotation_slice"] = slice_num
+    st.session_state["pending_annotation_filename"] = original_filename
+    st.session_state["pending_annotation_mask"] = mask_name
+    st.session_state["pending_annotation_upload_id"] = upload_id
+    st.session_state["pending_annotation_trigger"] = True
+    
+    # Force rerun to open dialog with pre-loaded image
+    st.rerun()
+
+
 # --- Main Application Logic ---
 
 st.title("Annotate and Feedback")
@@ -595,6 +653,36 @@ if upload_id_param:
 active_upload_id = st.session_state.get("annotate_upload_id", "").strip()
 st.session_state.setdefault("annotator_name", "")
 st.session_state.setdefault("annotator_email", "")
+
+# --- Dialog Trigger Check ---
+# If annotation was prepared in previous run, open the dialog now
+if st.session_state.get("pending_annotation_trigger"):
+    # Clear trigger immediately to prevent loops
+    st.session_state["pending_annotation_trigger"] = False
+    
+    # Retrieve pre-loaded data from session state
+    pending_image = st.session_state.get("pending_annotation_image")
+    pending_view = st.session_state.get("pending_annotation_view")
+    pending_slice = st.session_state.get("pending_annotation_slice")
+    pending_filename = st.session_state.get("pending_annotation_filename")
+    pending_mask = st.session_state.get("pending_annotation_mask")
+    pending_upload_id = st.session_state.get("pending_annotation_upload_id")
+    
+    if pending_image is not None:
+        logger.info(
+            "Opening dialog with pre-loaded image | view=%s | slice=%s | size=%s",
+            pending_view,
+            pending_slice,
+            pending_image.size,
+        )
+        open_feedback_dialog(
+            pending_image,
+            pending_view,
+            pending_slice,
+            pending_filename,
+            pending_mask,
+            upload_id=pending_upload_id,
+        )
 
 if not active_upload_id:
     st.error("Upload ID missing. Please open this page from the dashboard.")
@@ -757,7 +845,7 @@ if volume_ready:
         img_z = process_slice(vol[z_idx, :, :], mask_slice, level, width, 1.0, color_map)
         st.image(img_z, use_container_width=True)
         if st.button("✎ Annotate Axial", key="btn_z"):
-            open_feedback_dialog(img_z, "Axial", z_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
+            prepare_and_open_annotation(img_z, "Axial", z_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 
     with col_cor:
         st.subheader("Coronal")
@@ -767,7 +855,7 @@ if volume_ready:
         img_y = process_slice(slice_img, mask_slice, level, width, asp_coronal, color_map)
         st.image(img_y, use_container_width=True)
         if st.button("✎ Annotate Coronal", key="btn_y"):
-            open_feedback_dialog(img_y, "Coronal", y_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
+            prepare_and_open_annotation(img_y, "Coronal", y_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 
     with col_sag:
         st.subheader("Sagittal")
@@ -777,7 +865,7 @@ if volume_ready:
         img_x = process_slice(slice_img, mask_slice, level, width, asp_sagittal, color_map)
         st.image(img_x, use_container_width=True)
         if st.button("✎ Annotate Sagittal", key="btn_x"):
-            open_feedback_dialog(img_x, "Sagittal", x_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
+            prepare_and_open_annotation(img_x, "Sagittal", x_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 
 
     if color_map is not None and mask is not None:
