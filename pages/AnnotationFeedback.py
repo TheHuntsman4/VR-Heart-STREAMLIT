@@ -417,11 +417,12 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
 
     with col_canvas:
         # Wait for bg_pil to be loaded, then await for 5 seconds before proceeding
+        logger.warning(f"Waiting for background image to load... {not bg_pil}")
         if not bg_pil:
             time.sleep(5)
-            st.error("Background image not loaded. Please try again.")
+            logger.warning("Background image not loaded. Please try again.")
         else:
-            print(f"[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
+            logger.warning(f"[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
         canvas_id = f"canvas_{view_name}_{slice_num}"
 
         canvas_result = st_canvas(
