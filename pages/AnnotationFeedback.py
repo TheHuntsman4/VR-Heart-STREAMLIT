@@ -715,7 +715,7 @@ if volume_ready:
         z_idx = st.slider("Z Slice", 0, vol.shape[0] - 1, vol.shape[0] // 2)
         mask_slice = mask[z_idx, :, :] if mask is not None and show_mask else None
         img_z = process_slice(vol[z_idx, :, :], mask_slice, level, width, 1.0, color_map)
-        st.image(img_z, width='stretch')
+        st.image(img_z, use_container_width=True)
         if st.button("✎ Annotate Axial", key="btn_z"):
             open_feedback_dialog(img_z, "Axial", z_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 
@@ -725,7 +725,7 @@ if volume_ready:
         slice_img = np.flipud(vol[:, y_idx, :])
         mask_slice = np.flipud(mask[:, y_idx, :]) if mask is not None and show_mask else None
         img_y = process_slice(slice_img, mask_slice, level, width, asp_coronal, color_map)
-        st.image(img_y, width='stretch')
+        st.image(img_y, use_container_width=True)
         if st.button("✎ Annotate Coronal", key="btn_y"):
             open_feedback_dialog(img_y, "Coronal", y_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 
@@ -735,7 +735,7 @@ if volume_ready:
         slice_img = np.flipud(vol[:, :, x_idx])
         mask_slice = np.flipud(mask[:, :, x_idx]) if mask is not None and show_mask else None
         img_x = process_slice(slice_img, mask_slice, level, width, asp_sagittal, color_map)
-        st.image(img_x, width='stretch')
+        st.image(img_x, use_container_width=True)
         if st.button("✎ Annotate Sagittal", key="btn_x"):
             open_feedback_dialog(img_x, "Sagittal", x_idx, dicom_filename, active_mask_name, upload_id=active_upload_id or None)
 

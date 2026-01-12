@@ -99,13 +99,13 @@ else:
 
             detail_url = build_detail_url(upload_id)
             if detail_url and status == "Completed":
-                cols[4].link_button("Add Comments", url=detail_url, icon="💬", help="Provide clinical feedback", width='stretch')
+                cols[4].link_button("Add Comments", url=detail_url, icon="💬", help="Provide clinical feedback")
             else:
                 cols[4].empty()
 
             download_link = build_drive_link(u.get("drive_combined_file_id") or u.get("drive_output_file_id"))
             if download_link:
-                cols[5].link_button("Download Results", url=download_link, icon="📥", help="Download from Google Drive", width='stretch')
+                cols[5].link_button("Download Results", url=download_link, icon="📥", help="Download from Google Drive")
             else:
                 cols[5].caption("Processing...")
 
@@ -119,7 +119,7 @@ else:
             if pending_delete:
                 st.warning(f"Are you sure you want to delete {u.get('original_filename')}?")
                 c1, c2 = st.columns([1, 1])
-                if c1.button("Confirm", key=f"yes_{upload_id}", type="primary", width='stretch'):
+                if c1.button("Confirm", key=f"yes_{upload_id}", type="primary"):
                     del st.session_state[f"pending_delete_{upload_id}"]
                     with st.spinner("Deleting..."):
                         try:
@@ -128,7 +128,7 @@ else:
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error: {e}")
-                if c2.button("Cancel", key=f"no_{upload_id}", width='stretch'):
+                if c2.button("Cancel", key=f"no_{upload_id}"):
                     del st.session_state[f"pending_delete_{upload_id}"]
                     st.rerun()
 
