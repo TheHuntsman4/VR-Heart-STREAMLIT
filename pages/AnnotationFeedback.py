@@ -430,7 +430,8 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # Convert PIL to base64 for CSS background (workaround for background_image bug)
+        # Convert PIL to base64 for CSS background
+        # (Your existing CSS logic is perfect, keep it!)
         img_buffer = io.BytesIO()
         bg_pil.save(img_buffer, format="PNG")
         img_base64_bg = base64.b64encode(img_buffer.getvalue()).decode()
@@ -439,11 +440,11 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         st.markdown(
             f"""
             <style>
-            div[data-testid="stCustomComponentV1"]:has(canvas) {{
+            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) {{
                 background-image: url("data:image/png;base64,{img_base64_bg}") !important;
                 background-size: {canvas_width}px {canvas_height}px !important;
                 background-repeat: no-repeat !important;
-                background-position: top left !important;
+                background-position: center !important;
             }}
             </style>
             """,
@@ -451,10 +452,13 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         )
 
         canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 0)",
+            fill_color="rgba(255, 255, 255, 0)",  # Fill for drawing tools
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_image=bg_pil,
+            # CHANGE 1: Set background_color to fully transparent
+            background_color="rgba(0, 0, 0, 0)", 
+            # CHANGE 2: Remove background_image (Let CSS handle the visual)
+            background_image=None, 
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
