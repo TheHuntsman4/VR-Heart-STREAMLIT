@@ -427,9 +427,8 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
                 position: relative;
                 width: {canvas_width}px;
                 height: {canvas_height}px;
-                background-image: url('data:image/png;base64,{img_base64}');
-                background-size: {canvas_width}px {canvas_height}px;
-                background-repeat: no-repeat;
+                background: transparent !important;
+                background-image: none !important;
             ">
             </div>
             <style>
@@ -438,13 +437,17 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
             #canvas-container-{canvas_id} ~ div[data-testid="stCustomComponentV1"],
             div.st-key-{canvas_id} {{
                 margin-top: -{canvas_height}px !important;
+                background: transparent !important;
+                background-color: transparent !important;
             }}
-            /* Make canvas wrapper transparent */
+            /* Make canvas wrapper and internal elements fully transparent */
             div.st-key-{canvas_id},
             div.st-key-{canvas_id} > div,
             div.st-key-{canvas_id} iframe {{
                 background: transparent !important;
                 background-color: transparent !important;
+                opacity: 1 !important;
+            }}
             }}
             </style>
             """,
