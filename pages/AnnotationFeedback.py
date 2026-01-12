@@ -413,54 +413,36 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # --- OVERLAY APPROACH: st.image + transparent canvas using wrapper div ---
+        # --- DIRECT BACKGROUND_IMAGE APPROACH ---
+        # Force the image into exact format the canvas expects
         
-        # Convert PIL to base64 for HTML img tag
-        img_buffer = io.BytesIO()
-        bg_pil.save(img_buffer, format="PNG")
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+        # 1. Ensure RGB mode and exact canvas dimensions
+        canvas_bg = bg_pil.convert("RGB")
+        canvas_bg = canvas_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
         
-        # Create HTML structure with image as background of a positioned container
-        st.markdown(
-            f"""
-            <div id="canvas-container-{canvas_id}" style="
-                position: relative;
-                width: {canvas_width}px;
-                height: {canvas_height}px;
-                background: transparent !important;
-                background-image: none !important;
-            ">
-            </div>
-            <style>
-            /* Pull the canvas component up to overlay on the div */
-            #canvas-container-{canvas_id} + div[data-testid="stVerticalBlock"] > div[data-testid="stCustomComponentV1"],
-            #canvas-container-{canvas_id} ~ div[data-testid="stCustomComponentV1"],
-            div.st-key-{canvas_id} {{
-                margin-top: -{canvas_height}px !important;
-                background: transparent !important;
-                background-color: transparent !important;
-            }}
-            /* Make canvas wrapper and internal elements fully transparent */
-            div.st-key-{canvas_id},
-            div.st-key-{canvas_id} > div,
-            div.st-key-{canvas_id} iframe {{
-                background: transparent !important;
-                background-color: transparent !important;
-                opacity: 1 !important;
-            }}
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
+        # 2. Save to bytes and reload to create a completely fresh PIL Image
+        # This forces a clean image object that the canvas can serialize
+        img_bytes = io.BytesIO()
+        canvas_bg.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+        fresh_bg_image = Image.open(img_bytes)
+        fresh_bg_image.load()  # Force load into memory
+        
+        logger.info(
+            "Fresh background image created | mode=%s | size=%s | format=%s | view=%s",
+            fresh_bg_image.mode,
+            fresh_bg_image.size,
+            fresh_bg_image.format,
+            view_name,
         )
         
-        # Render transparent canvas
+        # Render canvas with fresh background image
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_image=None,
-            background_color="rgba(0, 0, 0, 0)",
+            background_image=fresh_bg_image,
+            background_color="#000000",
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
@@ -470,14 +452,14 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
         )
         
         logger.info(
-            "Canvas loaded (overlay mode) | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
+            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
             view_name,
             slice_num,
             canvas_width,
             canvas_height,
             canvas_result.image_data is not None,
         )
-        # --- END OVERLAY APPROACH ---
+        # --- END DIRECT APPROACH ---
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
