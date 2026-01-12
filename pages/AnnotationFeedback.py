@@ -406,8 +406,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         slice_num,
     )
     
-    # Convert image to base64 for HTML embedding (used purely for logging/debug if needed, 
-    # but primarily re-encoded below for the CSS injection)
+    # Convert image to base64 for HTML embedding
     buffered = io.BytesIO()
     bg_pil.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -438,16 +437,23 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         bg_pil.save(img_buffer, format="PNG")
         img_base64_bg = base64.b64encode(img_buffer.getvalue()).decode()
         
-        # 2. Inject CSS to set the background on the parent container
-        # We use :has() to target the specific wrapper for THIS canvas key
+        # 2. Inject CSS
+        # We target the custom component wrapper specifically for this canvas key.
+        # CRITICAL FIX: We also target the 'iframe' inside it to force transparency.
         st.markdown(
             f"""
             <style>
+            /* Target the component wrapper */
             div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) {{
                 background-image: url("data:image/png;base64,{img_base64_bg}") !important;
                 background-size: {canvas_width}px {canvas_height}px !important;
                 background-repeat: no-repeat !important;
-                background-position: top left !important;
+                background-position: left top !important;
+            }}
+            
+            /* Target the iframe specifically to remove the black square */
+            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) iframe {{
+                background-color: transparent !important;
             }}
             </style>
             """,
@@ -459,9 +465,9 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            # IMPORTANT: Set background to None so the component doesn't try to render it
+            # Set background_image to None to prevent Python->JS serialization freeze
             background_image=None,
-            # IMPORTANT: Make canvas transparent so CSS background shows through
+            # Set background_color to transparent so CSS image shows through
             background_color="rgba(0, 0, 0, 0)", 
             height=canvas_height,
             width=canvas_width,
