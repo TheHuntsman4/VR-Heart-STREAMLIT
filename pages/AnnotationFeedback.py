@@ -439,7 +439,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             display_toolbar=True,
             update_streamlit=True,
         )
-        print(f"\n[CANVAS RESULT LOADED] View: {view_name}, Slice: {slice_num}, Canvas ID: {canvas_id}, Has image_data: {canvas_result.image_data is not None}")
+        logger.warning(f"\n[CANVAS RESULT LOADED] View: {view_name}, Slice: {slice_num}, Canvas ID: {canvas_id}, Has image_data: {canvas_result.image_data is not None}")
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
