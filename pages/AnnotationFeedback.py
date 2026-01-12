@@ -394,21 +394,6 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     mask_info = f" (Mask: **{mask_name}**)" if mask_name and mask_name != "None" else " (No Mask)"
     st.write(f"Annotating **{view_name}** - Slice **{slice_num}**{mask_info}")
     
-    # PIL image is already loaded - no conversion needed
-    logger.info(
-        "bg_pil ready (pre-loaded) | mode=%s | size=%s | upload=%s | view=%s | slice=%s",
-        bg_pil.mode,
-        bg_pil.size,
-        upload_id or "N/A",
-        view_name,
-        slice_num,
-    )
-    
-    # Convert image to base64 for HTML embedding
-    buffered = io.BytesIO()
-    bg_pil.save(buffered, format="PNG")
-    img_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
     # Get dimensions from PIL image
     canvas_width, canvas_height = bg_pil.size
     logger.info(
@@ -430,43 +415,25 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
         
         # --- FIXED SECTION START ---
         
-        # 1. Prepare the image for CSS
-        img_buffer = io.BytesIO()
-        bg_pil.save(img_buffer, format="PNG")
-        img_base64_bg = base64.b64encode(img_buffer.getvalue()).decode()
+        # Prepare the background image properly for the canvas component
+        # Ensure it's in RGB mode (not RGBA) and reasonable size
+        canvas_bg_image = bg_pil.convert("RGB") if bg_pil.mode != "RGB" else bg_pil
         
-        # 2. Inject CSS
-        # We target the custom component wrapper specifically for this canvas key.
-        # CRITICAL FIX: We also target the 'iframe' inside it to force transparency.
-        st.markdown(
-            f"""
-            <style>
-            /* Target the component wrapper */
-            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) {{
-                background-image: url("data:image/png;base64,{img_base64_bg}") !important;
-                background-size: {canvas_width}px {canvas_height}px !important;
-                background-repeat: no-repeat !important;
-                background-position: left top !important;
-            }}
-            
-            /* Target the iframe specifically to remove the black square */
-            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) iframe {{
-                background-color: transparent !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
+        logger.info(
+            "Canvas background image prepared | mode=%s | size=%s | view=%s | slice=%s",
+            canvas_bg_image.mode,
+            canvas_bg_image.size,
+            view_name,
+            slice_num,
         )
 
-        # 3. Render the Canvas (Transparent)
+        # Render the Canvas with the actual background_image parameter
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            # Set background_image to None to prevent Python->JS serialization freeze
-            background_image=None,
-            # Set background_color to transparent so CSS image shows through
-            background_color="rgba(0, 0, 0, 0)", 
+            background_image=canvas_bg_image,
+            background_color="#000000",
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
@@ -475,17 +442,13 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
             update_streamlit=True,
         )
         
-        # Inject JavaScript console.log for browser DevTools debugging
-        st.markdown(
-            f'<script>console.log("Canvas loaded | view={view_name} | slice={slice_num} | width={canvas_width} | height={canvas_height}")</script>',
-            unsafe_allow_html=True,
-        )
         logger.info(
-            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s",
+            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
             view_name,
             slice_num,
             canvas_width,
             canvas_height,
+            canvas_result.image_data is not None,
         )
         # --- FIXED SECTION END ---
 
@@ -602,14 +565,35 @@ def prepare_and_open_annotation(img_rgb: np.ndarray, view_name: str, slice_num: 
     then trigger dialog opening on rerun.
     """
     logger.info(
-        "Processing PIL image... | upload=%s | view=%s | slice=%s",
+        "Processing PIL image... | upload=%s | view=%s | slice=%s | input_shape=%s",
         upload_id or "N/A",
         view_name,
         slice_num,
+        img_rgb.shape,
     )
     
     # Convert numpy array to PIL Image
     pil_image = Image.fromarray(img_rgb)
+    
+    # Ensure RGB mode for canvas compatibility
+    if pil_image.mode != "RGB":
+        pil_image = pil_image.convert("RGB")
+    
+    # Resize if image is too large (max 800px on longest side) to prevent canvas issues
+    MAX_DIMENSION = 800
+    width, height = pil_image.size
+    if width > MAX_DIMENSION or height > MAX_DIMENSION:
+        ratio = min(MAX_DIMENSION / width, MAX_DIMENSION / height)
+        new_size = (int(width * ratio), int(height * ratio))
+        pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
+        logger.info(
+            "Image resized | original=(%s, %s) | new=%s | view=%s | slice=%s",
+            width,
+            height,
+            new_size,
+            view_name,
+            slice_num,
+        )
     
     logger.info(
         "Processing PIL complete | upload=%s | view=%s | slice=%s | mode=%s | size=%s",
@@ -618,12 +602,6 @@ def prepare_and_open_annotation(img_rgb: np.ndarray, view_name: str, slice_num: 
         slice_num,
         pil_image.mode,
         pil_image.size,
-    )
-    
-    # Inject JavaScript console.log for browser DevTools debugging
-    st.markdown(
-        f'<script>console.log("Processing PIL complete | view={view_name} | slice={slice_num} | size={pil_image.size}")</script>',
-        unsafe_allow_html=True,
     )
     
     # Store in session state
