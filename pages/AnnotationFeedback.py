@@ -425,7 +425,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         else:
             logger.warning(f"\n[BG_PIL LOADED] View: {view_name}, Slice: {slice_num}, Mode: {bg_pil.mode}, Size: {bg_pil.size}")
         canvas_id = f"canvas_{view_name}_{slice_num}"
-        logger.warning(f"\image data... {bg_pil.image_data}")
+        logger.warning(f"\image data... {bg_pil.getvalue()}")
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
