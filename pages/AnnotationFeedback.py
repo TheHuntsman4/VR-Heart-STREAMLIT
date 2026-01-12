@@ -406,7 +406,8 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         slice_num,
     )
     
-    # Convert image to base64 for HTML embedding
+    # Convert image to base64 for HTML embedding (used purely for logging/debug if needed, 
+    # but primarily re-encoded below for the CSS injection)
     buffered = io.BytesIO()
     bg_pil.save(buffered, format="PNG")
     img_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -430,13 +431,15 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # Convert PIL to base64 for CSS background
-        # (Your existing CSS logic is perfect, keep it!)
+        # --- FIXED SECTION START ---
+        
+        # 1. Prepare the image for CSS
         img_buffer = io.BytesIO()
         bg_pil.save(img_buffer, format="PNG")
         img_base64_bg = base64.b64encode(img_buffer.getvalue()).decode()
         
-        # Inject CSS to set background image on the canvas container
+        # 2. Inject CSS to set the background on the parent container
+        # We use :has() to target the specific wrapper for THIS canvas key
         st.markdown(
             f"""
             <style>
@@ -444,21 +447,22 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
                 background-image: url("data:image/png;base64,{img_base64_bg}") !important;
                 background-size: {canvas_width}px {canvas_height}px !important;
                 background-repeat: no-repeat !important;
-                background-position: center !important;
+                background-position: top left !important;
             }}
             </style>
             """,
             unsafe_allow_html=True,
         )
 
+        # 3. Render the Canvas (Transparent)
         canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 0)",  # Fill for drawing tools
+            fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            # CHANGE 1: Set background_color to fully transparent
+            # IMPORTANT: Set background to None so the component doesn't try to render it
+            background_image=None,
+            # IMPORTANT: Make canvas transparent so CSS background shows through
             background_color="rgba(0, 0, 0, 0)", 
-            # CHANGE 2: Remove background_image (Let CSS handle the visual)
-            background_image=None, 
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
@@ -466,6 +470,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             display_toolbar=True,
             update_streamlit=True,
         )
+        # --- FIXED SECTION END ---
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
@@ -505,6 +510,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         black_mask = (canvas_data[:, :, 0] < 10) & (canvas_data[:, :, 1] < 10) & (canvas_data[:, :, 2] < 10)
         canvas_data[black_mask, 3] = 0
 
+        # Merge drawing with original image (bg_pil)
         drawing_layer = Image.fromarray(canvas_data, "RGBA")
         bg_rgba = bg_pil.convert("RGBA")
         drawing_layer = drawing_layer.resize(bg_rgba.size)
@@ -518,16 +524,7 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
         mask_suffix = f"_{os.path.splitext(mask_name)[0]}" if mask_name and mask_name != "None" else "_nomask"
         fname = f"feedback_{sample_name}{mask_suffix}_{view_name}_{slice_num}.png"
 
-        feedback_payload = {
-            "sample_name": sample_name,
-            "mask_name": mask_name if mask_name and mask_name != "None" else None,
-            "view": view_name,
-            "slice_number": slice_num,
-            "filename": fname,
-            "text_feedback": text_feedback if text_feedback else None,
-            "image_base64": final_img_base64,
-        }
-
+        # Prepare Payload
         files = [
             (
                 "attachments",
@@ -578,7 +575,6 @@ def open_feedback_dialog(img_rgb, view_name, slice_num, original_filename, mask_
             file_name=fname,
             mime="image/png",
         )
-
 # --- Main Application Logic ---
 
 st.title("Annotate and Feedback")
