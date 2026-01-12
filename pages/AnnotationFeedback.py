@@ -413,27 +413,58 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # --- FIXED SECTION START ---
+        # --- OVERLAY APPROACH: st.image + transparent canvas ---
         
-        # Prepare the background image properly for the canvas component
-        # Ensure it's in RGB mode (not RGBA) and reasonable size
-        canvas_bg_image = bg_pil.convert("RGB") if bg_pil.mode != "RGB" else bg_pil
-        
-        logger.info(
-            "Canvas background image prepared | mode=%s | size=%s | view=%s | slice=%s",
-            canvas_bg_image.mode,
-            canvas_bg_image.size,
-            view_name,
-            slice_num,
+        # Create a container for the overlay
+        st.markdown(
+            f"""
+            <style>
+            .canvas-overlay-{canvas_id} {{
+                position: relative;
+                width: {canvas_width}px;
+                height: {canvas_height}px;
+            }}
+            .canvas-overlay-{canvas_id} .background-image {{
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 1;
+            }}
+            .canvas-overlay-{canvas_id} .canvas-layer {{
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 2;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
         )
-
-        # Render the Canvas with the actual background_image parameter
+        
+        # Display the background image using st.image (this always works)
+        st.image(bg_pil, width=canvas_width, caption=None)
+        
+        # Apply negative margin to overlay canvas on top of image
+        st.markdown(
+            f"""
+            <style>
+            div[data-testid="stCustomComponentV1"]:has(div[class*="st-key-{canvas_id}"]) {{
+                margin-top: -{canvas_height}px !important;
+                position: relative;
+                z-index: 10;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        # Render transparent canvas on top
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_image=canvas_bg_image,
-            background_color="#000000",
+            background_image=None,
+            background_color="rgba(0, 0, 0, 0)",
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
@@ -443,14 +474,14 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
         )
         
         logger.info(
-            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
+            "Canvas loaded (overlay mode) | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
             view_name,
             slice_num,
             canvas_width,
             canvas_height,
             canvas_result.image_data is not None,
         )
-        # --- FIXED SECTION END ---
+        # --- END OVERLAY APPROACH ---
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
