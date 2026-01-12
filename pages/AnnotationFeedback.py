@@ -47,6 +47,35 @@ st.markdown(
         visibility: visible !important;
         display: inline-block !important;
     }
+
+    /* Dialog background - BRIGHT RED - Multiple selectors for comprehensive coverage */
+    div[data-testid="stDialog"],
+    div[data-baseweb="modal"],
+    .stDialog,
+    [data-baseweb="modal"] > div,
+    div[data-baseweb="modal"] > div[role="dialog"],
+    [role="dialog"] {
+        background-color: #FF0000 !important;
+    }
+    
+    /* Dialog content container background */
+    div[data-testid="stDialog"] > div,
+    div[data-baseweb="modal"] > div,
+    [data-baseweb="modal"] > div > div {
+        background-color: #FF0000 !important;
+    }
+    
+    /* Dialog backdrop/overlay - semi-transparent red */
+    [data-baseweb="modal"]:before,
+    [data-baseweb="modal"]::before {
+        background-color: rgba(255, 0, 0, 0.5) !important;
+    }
+    
+    /* Additional modal backdrop targeting */
+    div[data-baseweb="modal"] + div,
+    body > div[data-baseweb="modal"] {
+        background-color: rgba(255, 0, 0, 0.3) !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -63,6 +92,15 @@ st.markdown("""
     /* Centering the canvas container */
     div[data-testid="stCanvas"] {
         margin: 0 auto;
+    }
+    
+    /* Additional dialog styling for bright red background */
+    [data-baseweb="modal"],
+    [data-baseweb="modal"] > div,
+    [data-baseweb="modal"] > div[role="dialog"],
+    div[role="dialog"] {
+        background-color: #FF0000 !important;
+        background: #FF0000 !important;
     }
     </style>
     """, unsafe_allow_html=True)
