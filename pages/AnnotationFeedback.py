@@ -413,36 +413,49 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # --- DIRECT BACKGROUND_IMAGE APPROACH ---
-        # Force the image into exact format the canvas expects
+        # --- WORKING OVERLAY APPROACH ---
+        # Display image with st.image (WORKS), then position canvas on top
         
-        # 1. Ensure RGB mode and exact canvas dimensions
-        canvas_bg = bg_pil.convert("RGB")
-        canvas_bg = canvas_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+        # Convert to base64 for the fallback div
+        img_buffer = io.BytesIO()
+        bg_pil.save(img_buffer, format="PNG")
+        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
         
-        # 2. Save to bytes and reload to create a completely fresh PIL Image
-        # This forces a clean image object that the canvas can serialize
-        img_bytes = io.BytesIO()
-        canvas_bg.save(img_bytes, format="PNG")
-        img_bytes.seek(0)
-        fresh_bg_image = Image.open(img_bytes)
-        fresh_bg_image.load()  # Force load into memory
+        # First: Display the image - this ALWAYS works
+        st.image(bg_pil, width=canvas_width)
         
-        logger.info(
-            "Fresh background image created | mode=%s | size=%s | format=%s | view=%s",
-            fresh_bg_image.mode,
-            fresh_bg_image.size,
-            fresh_bg_image.format,
-            view_name,
+        # Second: Inject CSS to pull canvas up and make it overlay the image
+        # Using multiple selectors for maximum compatibility
+        st.markdown(
+            f"""
+            <style>
+            /* Target by the key class that Streamlit adds */
+            div.st-key-{canvas_id} {{
+                margin-top: -{canvas_height}px !important;
+                background: transparent !important;
+            }}
+            div.st-key-{canvas_id} > div {{
+                background: transparent !important;
+            }}
+            div.st-key-{canvas_id} iframe {{
+                background: transparent !important;
+            }}
+            /* Also target by data-testid */
+            div[data-testid="stCustomComponentV1"]:has(iframe[title*="st_canvas"]) {{
+                background: transparent !important;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
         )
         
-        # Render canvas with fresh background image
+        # Third: Render the canvas - try "transparent" keyword
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_image=fresh_bg_image,
-            background_color="#000000",
+            background_image=None,
+            background_color="transparent",
             height=canvas_height,
             width=canvas_width,
             drawing_mode=tool,
@@ -452,14 +465,10 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
         )
         
         logger.info(
-            "Canvas loaded | view=%s | slice=%s | width=%s | height=%s | has_image_data=%s",
-            view_name,
-            slice_num,
-            canvas_width,
-            canvas_height,
-            canvas_result.image_data is not None,
+            "Canvas loaded (overlay) | view=%s | slice=%s | size=(%s,%s)",
+            view_name, slice_num, canvas_width, canvas_height,
         )
-        # --- END DIRECT APPROACH ---
+        # --- END OVERLAY APPROACH ---
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
