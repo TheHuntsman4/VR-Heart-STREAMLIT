@@ -413,51 +413,43 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
     with col_canvas:
         canvas_id = f"canvas_{view_name}_{slice_num}"
         
-        # --- WORKING OVERLAY APPROACH ---
-        # Display image with st.image (WORKS), then position canvas on top
+        # --- BACKGROUND_IMAGE APPROACH (the only way) ---
         
-        # Convert to base64 for the fallback div
-        img_buffer = io.BytesIO()
-        bg_pil.save(img_buffer, format="PNG")
-        img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+        # Step 1: Create image at EXACT canvas dimensions
+        target_width = min(canvas_width, 600)  # Limit size for performance
+        target_height = int(canvas_height * (target_width / canvas_width))
         
-        # First: Display the image - this ALWAYS works
-        st.image(bg_pil, width=canvas_width)
+        # Step 2: Resize and convert to RGB
+        resized_img = bg_pil.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        if resized_img.mode != "RGB":
+            resized_img = resized_img.convert("RGB")
         
-        # Second: Inject CSS to pull canvas up and make it overlay the image
-        # Using multiple selectors for maximum compatibility
-        st.markdown(
-            f"""
-            <style>
-            /* Target by the key class that Streamlit adds */
-            div.st-key-{canvas_id} {{
-                margin-top: -{canvas_height}px !important;
-                background: transparent !important;
-            }}
-            div.st-key-{canvas_id} > div {{
-                background: transparent !important;
-            }}
-            div.st-key-{canvas_id} iframe {{
-                background: transparent !important;
-            }}
-            /* Also target by data-testid */
-            div[data-testid="stCustomComponentV1"]:has(iframe[title*="st_canvas"]) {{
-                background: transparent !important;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
+        # Step 3: Save to PNG bytes and reload as fresh image
+        png_buffer = io.BytesIO()
+        resized_img.save(png_buffer, format="PNG", optimize=False)
+        png_buffer.seek(0)
+        
+        # Step 4: Open as completely new PIL Image
+        canvas_background = Image.open(png_buffer)
+        canvas_background.load()  # Force load into memory
+        
+        logger.info(
+            "Canvas BG prepared | size=%s | mode=%s | format=%s | view=%s | slice=%s",
+            canvas_background.size,
+            canvas_background.mode,
+            canvas_background.format,
+            view_name,
+            slice_num,
         )
         
-        # Third: Render the canvas - try "transparent" keyword
+        # Step 5: Render canvas with background_image
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0)",
             stroke_width=stroke_width,
             stroke_color=stroke_color,
-            background_image=None,
-            background_color="transparent",
-            height=canvas_height,
-            width=canvas_width,
+            background_image=canvas_background,
+            height=target_height,
+            width=target_width,
             drawing_mode=tool,
             key=canvas_id,
             display_toolbar=True,
@@ -465,10 +457,10 @@ def open_feedback_dialog(bg_pil: Image.Image, view_name, slice_num, original_fil
         )
         
         logger.info(
-            "Canvas loaded (overlay) | view=%s | slice=%s | size=(%s,%s)",
-            view_name, slice_num, canvas_width, canvas_height,
+            "Canvas rendered | view=%s | slice=%s | has_result=%s",
+            view_name, slice_num, canvas_result is not None,
         )
-        # --- END OVERLAY APPROACH ---
+        # --- END BACKGROUND_IMAGE APPROACH ---
 
     with col_feedback:
         st.subheader("📝 Text Feedback")
